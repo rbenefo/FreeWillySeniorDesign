@@ -1,0 +1,312 @@
+<style>
+.title {
+	font-family: "Kiona";
+	font-size:30;
+}
+.IMUdata {
+  border: collapse ;
+  border-radius: 25px;
+  box-shadow: 2px 2px 2px 2px #f2f0ee;
+  display:table;
+  margin-top: 50px;
+}
+#rolldata {
+	font-family: "Kiona";
+}
+#pitchdata {
+	font-family: "Kiona";
+}
+
+#yawdata {
+	font-family: "Kiona";
+}
+
+.map{
+	margin-top:50px;
+}
+#rollviz {
+  /* Initial value for rotate is needed for transition to work */
+  transform:rotate(0);  
+
+  /* CSS transition creates smooth effect */
+  transition:all 1.5s;
+}
+#yawviz {
+  /* Initial value for rotate is needed for transition to work */
+  transform:rotate(0);  
+
+  /* CSS transition creates smooth effect */
+  transition:all 1.5s;
+}
+#pitchviz {
+  /* Initial value for rotate is needed for transition to work */
+  transform:rotate(0);  
+
+  /* CSS transition creates smooth effect */
+  transition:all 1.5s;
+}
+
+</style>
+<html>
+<head>
+<script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+<script src='https://api.mapbox.com/mapbox-gl-js/v1.8.0/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v1.8.0/mapbox-gl.css' rel='stylesheet' />
+
+</head>
+<body>
+	<center>
+<div class="title"> Free Willy Data</div>
+	<div class="IMUdata">
+		<table>
+			<tr>
+				<th>
+					<div id="rolldata">
+					</div>
+				</th>
+				<th>
+					<div id="yawdata">
+					</div>
+				</th>
+				<th>
+					<div id="pitchdata">
+					</div>
+				</th>
+			</tr>
+			<tr>
+				<td>	
+					<div id = "rollviz"><img id = "freewillyback" src="freewillyback.png"  width="300"></div>
+				</td>
+				<td>		
+					<div id = "yawviz"><img id = "freewillyback" src="freewillytop.png"  width="300"></div>
+				</td>
+				<td>
+					<div id = "pitchviz"><img id = "freewillyback" src="freewillyside.png"  width="300"></div>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div class = "map">
+
+		<div id='map' style='width: 750px; height: 300px; margin: 0 auto; border-radius:25px;'></div>
+	</div>
+</center>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiZXRobmFyY2giLCJhIjoiY2s3cjFmYW11MDY2czNrcDN1bWJsYXh5NCJ9.OL_ElAnO8QKZsNuAN1tgAQ';
+var map = new mapboxgl.Map({
+container: 'map',
+style: 'mapbox://styles/mapbox/streets-v11'
+});
+</script>
+<div id = "entries">
+</div>
+</body>
+<script>
+	var IMUAPI_URL =  'https://kkhshgz1ii.execute-api.us-east-1.amazonaws.com/production/?id=*';
+	var rollviz = document.getElementById('rollviz');
+	var yawviz = document.getElementById('yawviz');
+	var pitchviz = document.getElementById('pitchviz');
+
+	// console.log('test');
+	window.setInterval(function() {
+		$.ajax({
+			type: 'GET',
+			url: API_URL,
+			// contentType:"application/json",
+			// dataType: 'json',
+			crossDomain: true,
+			success: function(data){
+				data.forEach(function(item){
+					$('#rolldata').html('');
+					$('#rolldata').append("Roll: "+item.roll+"°");
+					$('#yawdata').html('');
+					$('#yawdata').append("Yaw: "+item.yaw+"°");
+					$('#pitchdata').html('');
+					$('#pitchdata').append("Pitch: "+item.pitch+"°");
+					var rollangle = item.roll;
+					var yawangle = item.yaw;
+					var pitchangle = item.pitch;
+					rollviz.style.transform = "rotate(" + (rollangle% 360)+ "deg)";
+					yawviz.style.transform = "rotate(" + (yawangle% 360)+ "deg)";
+					pitchviz.style.transform = "rotate(" + (-pitchangle% 360)+ "deg)";
+
+
+				})
+			}	
+		});			
+	 	}, 2000);
+</script>
+
+<script type = "text/javascript">
+	var API_URL =  'https://kkhshgz1ii.execute-api.us-east-1.amazonaws.com/production/?id=*';
+	mapboxgl.accessToken = 'pk.eyJ1IjoiZXRobmFyY2giLCJhIjoiY2s3cjFmYW11MDY2czNrcDN1bWJsYXh5NCJ9.OL_ElAnO8QKZsNuAN1tgAQ';
+	var map = new mapboxgl.Map({
+		container: 'map',
+		style: 'mapbox://styles/mapbox/light-v10',
+		center: [-74.534106, 40.434449],
+		zoom: 17
+	});
+
+	$(document).ready(function(){
+		// console.log('test');
+		$.ajax({
+			type: 'GET',
+			url: API_URL,
+			// contentType:"application/json",
+			// dataType: 'json',
+			crossDomain: true,
+			success: function(data){
+				// $('#entries').html('');
+				// console.log(data);
+				data.forEach(function(item){
+					map.addSource('points'+item.timestamp, {
+						'type': 'geojson',
+						'data': {
+							'type': 'FeatureCollection',
+							'features': [
+							{
+								// feature for Mapbox DC
+								'type': 'Feature',
+								'geometry': {
+								'type': 'Point',
+								'coordinates': [
+								item.lon,
+								item.lat
+							]
+							},
+							}
+							]
+
+					}
+
+				});
+				map.addLayer({
+					'id': 'points'+item.timestamp,
+					'type': 'circle',
+					'source': 'points'+item.timestamp,
+					'paint': {
+						'circle-radius': 5,
+						'circle-color': '#f5cdb6'
+					}
+				});
+					// $('#entries').append('<p>'+item.lat+'<p>');
+					// $('#entries').append('<p>'+item.lon+'<p>');
+
+				})//
+			},
+			error: function(xhr, status, error){
+				console.log("oh dear dat's an error!");
+				alert("an error has occured: " + xhr.status + " " + xhr.statusText+ error);
+ 
+			}
+			// error: function(data) {
+			// 	$('#entries').html('');
+			// 	// body...
+			// };
+
+		});
+	var size = 150;
+    var pulsingDot = {
+        width: size,
+        height: size,
+        data: new Uint8Array(size * size * 4),
+
+        // get rendering context for the map canvas when layer is added to the map
+        onAdd: function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = this.width;
+            canvas.height = this.height;
+            this.context = canvas.getContext('2d');
+        },
+
+        // called once before every frame where the icon will be used
+        render: function() {
+            var duration = 1500;
+            var t = (performance.now() % duration) / duration;
+
+            var radius = (size / 2) * 0.3;
+            var outerRadius = (size / 2) * 0.7 * t + radius;
+            var context = this.context;
+
+            // draw outer circle
+            context.clearRect(0, 0, this.width, this.height);
+            context.beginPath();
+            context.arc(
+                this.width / 2,
+                this.height / 2,
+                outerRadius,
+                0,
+                Math.PI * 2
+            );
+            context.fillStyle = 'rgba(255, 200, 200,' + (1 - t) + ')';
+            context.fill();
+
+            // draw inner circle
+            context.beginPath();
+            context.arc(
+                this.width / 2,
+                this.height / 2,
+                radius,
+                0,
+                Math.PI * 2
+            );
+            context.fillStyle = 'rgba(255, 100, 100, 1)';
+            context.strokeStyle = 'white';
+            context.lineWidth = 2 + 4 * (1 - t);
+            context.fill();
+            context.stroke();
+
+            // update this image's data with data from the canvas
+            this.data = context.getImageData(
+                0,
+                0,
+                this.width,
+                this.height
+            ).data;
+
+            // continuously repaint the map, resulting in the smooth animation of the dot
+            map.triggerRepaint();
+
+            // return `true` to let the map know that the image was updated
+            return true;
+        }
+    };
+
+	var API_URL2 =  'https://kkhshgz1ii.execute-api.us-east-1.amazonaws.com/production/live';
+	mapboxgl.accessToken = 'pk.eyJ1IjoiZXRobmFyY2giLCJhIjoiY2s3cjFmYW11MDY2czNrcDN1bWJsYXh5NCJ9.OL_ElAnO8QKZsNuAN1tgAQ';
+    map.on('load', function() {
+        map.addImage('pulsing-dot', pulsingDot, { pixelRatio: 2 });
+        window.setInterval(function() {
+            
+            map.getSource('points').setData(API_URL2);
+        }, 2000);
+
+        map.addSource('points', {
+            'type': 'geojson',
+            'data': {
+                'type': 'FeatureCollection',
+                'features': [
+                    {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Point',
+                            'coordinates': [0, 0]
+                        }
+                    }
+                ]
+            }
+        });
+        map.addLayer({
+            'id': 'points',
+            'type': 'symbol',
+            'source': 'points',
+            'layout': {
+                'icon-image': 'pulsing-dot'
+            }
+        });
+    });
+	});
+
+</script>
+
+</html>
